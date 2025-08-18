@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:vibration/vibration.dart';
 import '../models/game_settings.dart';
 import '../utils/color_utils.dart';
 
@@ -188,16 +189,10 @@ class GameService {
       controller.stop();
     }
 
-    // 진동 피드백
+    // 진동 피드백 - Android 15 및 S23 FE 호환성을 위한 강력한 진동
     if (GameSettings.hapticFeedback) {
-      try {
-        HapticFeedback.heavyImpact();
-        Future.delayed(const Duration(milliseconds: 200), () {
-          HapticFeedback.heavyImpact();
-        });
-      } catch (e) {
-        HapticFeedback.vibrate();
-      }
+      // 여러 진동 패턴을 순차적으로 실행하여 확실한 피드백 제공
+      _triggerIntenseVibration();
     }
 
     winnerController?.forward(from: 0);
@@ -262,6 +257,46 @@ class GameService {
     gatheringController?.reset();
 
     onStateChanged();
+  }
+
+  void _triggerIntenseVibration() async {
+    // Android에서는 vibration 패키지로 직접 진동 엔진 제어, iOS에서는 HapticFeedback 사용
+    try {
+      if (await Vibration.hasVibrator() == true) {
+        // Android: 강력한 진동 패턴 (1초간 연속 진동)
+        // 패턴: [0, 100, 50, 100, 50, 100, 50, 100, 50, 100, 50, 100, 50, 100, 50, 100, 50, 100, 50, 100]
+        // 0ms 대기, 100ms 진동, 50ms 대기, 100ms 진동... (총 1초)
+        List<int> pattern = [0];
+        for (int i = 0; i < 10; i++) {
+          pattern.add(100); // 진동 지속시간
+          pattern.add(50); // 대기시간
+        }
+
+        // 강도 설정 (Android에서 지원하는 경우)
+        if (await Vibration.hasAmplitudeControl() == true) {
+          Vibration.vibrate(
+              pattern: pattern, intensities: List.filled(pattern.length, 255));
+        } else {
+          Vibration.vibrate(pattern: pattern);
+        }
+      } else {
+        // iOS 또는 진동 미지원 기기: HapticFeedback 사용
+        HapticFeedback.heavyImpact();
+        for (int i = 1; i <= 5; i++) {
+          Future.delayed(Duration(milliseconds: i * 200), () {
+            HapticFeedback.heavyImpact();
+          });
+        }
+      }
+    } catch (e) {
+      // 최종 폴백: 기본 진동
+      try {
+        HapticFeedback.vibrate();
+      } catch (e2) {
+        // 모든 진동 방법이 실패한 경우
+        print('진동 기능을 사용할 수 없습니다: $e2');
+      }
+    }
   }
 
   void dispose() {
