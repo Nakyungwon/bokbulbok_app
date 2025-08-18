@@ -107,35 +107,52 @@ class InstructionsPage extends StatelessWidget {
             ),
             SizedBox(height: 10),
             Text(
-              '3. 2초 후 자동으로 복불복이 시작됩니다.',
+              '3. 마지막 참여/취소 이벤트 후 즉시 게임이 시작됩니다.',
               style: TextStyle(fontSize: 16),
             ),
             SizedBox(height: 10),
             Text(
-              '4. 3초 후 한 명이 랜덤으로 선택됩니다.',
+              '4. 2초 카운트다운 후 한 명이 랜덤으로 선택됩니다.',
               style: TextStyle(fontSize: 16),
             ),
             SizedBox(height: 10),
             Text(
-              '5. 선택된 사람의 원이 빨간색으로 변하고 애니메이션이 실행됩니다.',
+              '5. 당첨자 선정 시 0.2초 진동과 함께 승자 애니메이션이 실행됩니다.',
+              style: TextStyle(fontSize: 16),
+            ),
+            SizedBox(height: 10),
+            Text(
+              '6. "다시 하기" 버튼으로 새 게임을 시작할 수 있습니다.',
               style: TextStyle(fontSize: 16),
             ),
             SizedBox(height: 20),
             Text(
-              '팁:',
+              '게임 특징:',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 10),
             Text(
-              '• 손가락을 떼면 참여가 취소됩니다!',
+              '• 최대 15명까지 동시 참여 가능',
               style: TextStyle(fontSize: 16),
             ),
             Text(
-              '• 드래그 중에도 참여가 유지됩니다!',
+              '• 각 참여자는 고유한 색상으로 구분',
               style: TextStyle(fontSize: 16),
             ),
             Text(
-              '• 물리 기기에서 실행하면 진동 피드백을 느낄 수 있습니다.',
+              '• 손가락을 떼면 즉시 참여 취소',
+              style: TextStyle(fontSize: 16),
+            ),
+            Text(
+              '• 드래그 중에도 참여 상태 유지',
+              style: TextStyle(fontSize: 16),
+            ),
+            Text(
+              '• 다크모드로 눈의 피로도 감소',
+              style: TextStyle(fontSize: 16),
+            ),
+            Text(
+              '• 안드로이드에서 진동 피드백 제공',
               style: TextStyle(fontSize: 16),
             ),
           ],
@@ -279,8 +296,8 @@ class _BokbulbokHomePageState extends State<BokbulbokHomePage>
       _isGameInProgress = true;
     });
 
-    // 새로운 3초 타이머 시작
-    _selectionTimer = Timer(const Duration(seconds: 3), _selectRandomPlayer);
+    // 새로운 2초 타이머 시작
+    _selectionTimer = Timer(const Duration(seconds: 2), _selectRandomPlayer);
   }
 
   void _selectRandomPlayer() {
@@ -295,11 +312,14 @@ class _BokbulbokHomePageState extends State<BokbulbokHomePage>
       _isGameInProgress = false; // 게임 진행 상태 해제
     });
 
-    // 진동으로 당첨자 선정 알림 (플랫폼별 처리)
+    // 진동으로 당첨자 선정 알림 (0.2초 지속)
     try {
-      // 가장 강한 진동으로 테스트
+      // 0.2초 동안 진동 지속
       HapticFeedback.heavyImpact();
-      print('진동 실행됨: heavyImpact'); // 디버그 로그 추가
+      Future.delayed(const Duration(milliseconds: 200), () {
+        HapticFeedback.heavyImpact();
+      });
+      print('진동 실행됨: 0.2초 지속'); // 디버그 로그 추가
     } catch (e) {
       print('진동 오류: $e'); // 오류 로그 추가
       // 진동이 지원되지 않는 경우 기본 진동 시도
@@ -441,25 +461,26 @@ class _BokbulbokHomePageState extends State<BokbulbokHomePage>
     _participantControllers.clear();
     _participantAnimations.clear();
 
+    // 승자 애니메이션 컨트롤러들 리셋
     _winnerController?.reset();
   }
 
   final List<Color> _predefinedColors = [
-    Colors.red,
-    Colors.blue,
-    Colors.green,
-    Colors.orange,
-    Colors.purple,
-    Colors.teal,
-    Colors.pink,
-    Colors.indigo,
-    Colors.cyan,
-    Colors.amber,
-    Colors.lime,
-    Colors.deepPurple,
-    Colors.lightBlue,
-    Colors.lightGreen,
-    Colors.deepOrange,
+    Colors.red, // 빨간색
+    Colors.blue, // 파란색
+    Colors.green, // 초록색
+    Colors.orange, // 주황색
+    Colors.purple, // 보라색
+    Colors.yellow, // 노란색
+    Colors.pink, // 분홍색
+    Colors.cyan, // 청록색
+    Colors.lime, // 연두색
+    Colors.deepOrange, // 진한 주황색
+    Colors.indigo, // 남색
+    Colors.brown, // 갈색
+    Colors.amber, // 황색
+    Colors.deepPurple, // 진한 보라색
+    Colors.lightGreen, // 연한 초록색
   ];
 
   Color _generateUniqueColor() {
@@ -484,6 +505,15 @@ class _BokbulbokHomePageState extends State<BokbulbokHomePage>
       Random().nextInt(256),
       1.0,
     );
+  }
+
+  // 색상을 어둡게 만드는 함수
+  Color _getDarkerColor(Color color) {
+    // HSL 색상 공간으로 변환하여 명도를 낮춤
+    HSLColor hslColor = HSLColor.fromColor(color);
+    return hslColor
+        .withLightness((hslColor.lightness * 0.4).clamp(0.0, 1.0))
+        .toColor();
   }
 
   @override
@@ -589,7 +619,7 @@ class _BokbulbokHomePageState extends State<BokbulbokHomePage>
                     width: _winnerAnimation!.value,
                     height: _winnerAnimation!.value,
                     decoration: BoxDecoration(
-                      color: _colors[_selectedPlayerId!]!.withOpacity(0.3),
+                      color: _colors[_selectedPlayerId!]!,
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -598,6 +628,11 @@ class _BokbulbokHomePageState extends State<BokbulbokHomePage>
             ),
 
           ..._touches.entries.map((entry) {
+            // 당첨자가 선정된 후에는 당첨자만 표시
+            if (_selectedPlayerId != null && entry.key != _selectedPlayerId) {
+              return const SizedBox.shrink();
+            }
+
             final color = _colors[entry.key] ?? Colors.grey;
             final animation = _participantAnimations[entry.key];
 
@@ -619,13 +654,14 @@ class _BokbulbokHomePageState extends State<BokbulbokHomePage>
                           color: color,
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: Colors.white,
-                            width: 4,
+                            color: _getDarkerColor(color), // 각 색상의 어두운 버전으로 테두리
+                            width: 8, // 모든 원을 두꺼운 테두리로
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              blurRadius: 8,
+                              color: _getDarkerColor(color)
+                                  .withOpacity(0.6), // 각 색상의 어두운 버전으로 그림자
+                              blurRadius: 12,
                               offset: const Offset(0, 4),
                             ),
                           ],
@@ -654,18 +690,6 @@ class _BokbulbokHomePageState extends State<BokbulbokHomePage>
                       child: const Text('다시 하기'),
                     ),
                     const SizedBox(height: 10),
-                    ElevatedButton(
-                      onPressed: () {
-                        // 진동 테스트 버튼
-                        try {
-                          HapticFeedback.heavyImpact();
-                          print('테스트 진동 실행됨');
-                        } catch (e) {
-                          print('테스트 진동 오류: $e');
-                        }
-                      },
-                      child: const Text('진동 테스트'),
-                    ),
                   ],
                 ),
               ),

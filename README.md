@@ -1,16 +1,170 @@
-# bokbulbok_app
+# 복불복 앱 (Bokbulbok App) - 버전 2.0
 
-A new Flutter project.
+## 📱 앱 소개
 
-## Getting Started
+복불복 앱은 여러 명이 함께 즐길 수 있는 간단하고 재미있는 복불복 게임입니다. 터치와 드래그를 통해 직관적으로 참여할 수 있으며, 다크모드로 눈의 피로도를 줄인 현대적인 디자인을 제공합니다.
 
-This project is a starting point for a Flutter application.
+## 🎮 게임 방법
 
-A few resources to get you started if this is your first Flutter project:
+### 기본 플레이 (6단계)
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+1. **참여하기**
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+   - 여러 명이 화면에 손가락을 올려놓고 떼지 않습니다
+   - 최대 15명까지 동시 참여 가능
+
+2. **드래그하기**
+
+   - 손가락을 드래그하면 원이 따라다닙니다
+   - 드래그 중에도 참여 상태가 유지됩니다
+
+3. **게임 시작**
+
+   - 마지막 참여/취소 이벤트 후 즉시 게임이 시작됩니다
+   - 별도의 시작 버튼이 필요 없습니다
+
+4. **카운트다운**
+
+   - 2초 카운트다운 후 한 명이 랜덤으로 선택됩니다
+   - 게임 진행 중에는 새로운 참여가 제한됩니다
+
+5. **당첨자 선정**
+
+   - 당첨자 선정 시 0.2초 진동과 함께 승자 애니메이션이 실행됩니다
+   - 당첨자의 원에서 퍼져나가는 특별한 애니메이션
+
+6. **게임 재시작**
+   - "다시 하기" 버튼으로 새 게임을 시작할 수 있습니다
+   - 모든 상태가 초기화되어 새로운 게임을 시작합니다
+
+## ✨ 게임 특징
+
+### 🎯 핵심 기능
+
+- **멀티 참여**: 최대 15명까지 동시 참여 가능
+- **색상 구분**: 각 참여자는 고유한 색상으로 구분 (중복 없음)
+- **실시간 관리**: 손가락을 떼면 즉시 참여 취소
+- **드래그 지원**: 드래그 중에도 참여 상태 유지
+- **즉시 시작**: 참여자 수 변화에 즉시 반응하는 게임 진행
+
+### 🎨 사용자 경험
+
+- **다크모드**: 눈의 피로도를 감소시키는 다크 테마
+- **진동 피드백**: 안드로이드에서 진동으로 당첨 알림
+- **부드러운 애니메이션**: Elastic 애니메이션으로 생동감 있는 표현
+- **직관적인 UI**: 깔끔하고 집중할 수 있는 인터페이스
+
+### 🔧 기술적 특징
+
+- **크로스 플랫폼**: 웹, 안드로이드, iOS에서 동일하게 작동
+- **성능 최적화**: 효율적인 애니메이션 컨트롤러 관리
+- **안정성**: 타이머 중복 실행 방지 및 예측 가능한 게임 진행
+- **반응성**: 참여자 변화에 즉시 반응하는 시스템
+
+## 🚀 설치 및 실행
+
+### 요구사항
+
+- Flutter 3.0 이상
+- Dart 2.17 이상
+- Android Studio / VS Code
+
+### 설치 방법
+
+```bash
+# 프로젝트 클론
+git clone [repository-url]
+cd bokbulbok_app
+
+# 의존성 설치
+flutter pub get
+
+# 앱 실행
+flutter run
+```
+
+### 플랫폼별 실행
+
+```bash
+# 웹에서 실행
+flutter run -d chrome
+
+# 안드로이드에서 실행
+flutter run -d android
+
+# iOS에서 실행
+flutter run -d ios
+```
+
+## 📋 권한 요구사항
+
+### Android
+
+- `android.permission.VIBRATE`: 진동 피드백을 위한 권한
+
+### iOS
+
+- 별도의 권한 요구사항 없음
+
+### Web
+
+- 진동 기능은 지원되지 않음 (다른 피드백 방식 사용)
+
+## 🎯 사용 팁
+
+### 최적의 게임 경험을 위한 팁
+
+1. **실제 기기 사용**: 진동 피드백을 위해 실제 안드로이드 기기 사용 권장
+2. **적절한 참여자 수**: 2-8명 정도가 가장 재미있게 즐길 수 있습니다
+3. **드래그 활용**: 참여자들이 원을 자유롭게 움직이며 전략적으로 위치할 수 있습니다
+4. **진동 확인**: 기기의 진동 설정이 활성화되어 있는지 확인하세요
+
+### 문제 해결
+
+- **진동이 느껴지지 않는 경우**: 기기의 진동 설정을 확인하고 실제 안드로이드 기기에서 테스트해보세요
+- **게임이 시작되지 않는 경우**: 최소 1명 이상 참여해야 게임이 시작됩니다
+- **애니메이션이 부드럽지 않은 경우**: 기기의 성능을 확인하고 다른 앱을 종료해보세요
+
+## 🔄 버전 히스토리
+
+### 버전 2.0 (현재)
+
+- 구분 없는 통합 게임 플레이
+- 향상된 타이머 관리 시스템
+- 다크모드 테마 적용
+- 0.2초 진동 피드백
+- 깔끔한 UI/UX 개선
+
+### 버전 1.2
+
+- 터치 & 드래그 시스템
+- 큰 원 크기 (100x100)
+- 색상 중복 방지
+
+### 버전 1.0
+
+- 기본 복불복 게임 기능
+- 멀티 터치 참여
+- 랜덤 당첨자 선정
+
+## 🤝 기여하기
+
+이 프로젝트에 기여하고 싶으시다면:
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📄 라이선스
+
+이 프로젝트는 MIT 라이선스 하에 배포됩니다. 자세한 내용은 `LICENSE` 파일을 참조하세요.
+
+## 📞 문의
+
+프로젝트에 대한 문의사항이나 버그 리포트가 있으시면 이슈를 생성해주세요.
+
+---
+
+**즐거운 복불복 게임 되세요! 🎊**
