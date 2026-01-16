@@ -50,14 +50,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   icon: Icon(Icons.touch_app),
                 ),
                 ButtonSegment<GameMode>(
-                  value: GameMode.clockMode,
-                  label: Text('시계'),
-                  icon: Icon(Icons.access_time),
-                ),
-                ButtonSegment<GameMode>(
-                  value: GameMode.randomMode,
-                  label: Text('랜덤'),
-                  icon: Icon(Icons.shuffle),
+                  value: GameMode.rouletteMode,
+                  label: Text('룰렛'),
+                  icon: Icon(Icons.casino),
                 ),
               ],
               selected: {GameSettings.gameMode},
@@ -70,9 +65,50 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Text(
               GameSettings.gameMode == GameMode.defaultMode
                   ? '랜덤으로 당첨자를 선택합니다'
-                  : GameSettings.gameMode == GameMode.clockMode
-                      ? '시계방향으로 돌아가며 당첨자를 선택합니다'
-                      : '랜덤 순서로 돌아가며 당첨자를 선택합니다 (1바퀴 = 모두 1번씩)',
+                  : '룰렛처럼 돌아가며 당첨자를 선택합니다 (1바퀴 = 모두 1번씩)',
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              '당첨 인원',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                IconButton(
+                  onPressed: GameSettings.winnerCount > 1
+                      ? () async {
+                          await GameSettings.setWinnerCount(GameSettings.winnerCount - 1);
+                          setState(() {});
+                        }
+                      : null,
+                  icon: const Icon(Icons.remove_circle_outline),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[800],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${GameSettings.winnerCount}명',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                IconButton(
+                  onPressed: GameSettings.winnerCount < 10
+                      ? () async {
+                          await GameSettings.setWinnerCount(GameSettings.winnerCount + 1);
+                          setState(() {});
+                        }
+                      : null,
+                  icon: const Icon(Icons.add_circle_outline),
+                ),
+              ],
+            ),
+            Text(
+              '참여자 중 ${GameSettings.winnerCount}명이 당첨됩니다',
               style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
             const SizedBox(height: 20),

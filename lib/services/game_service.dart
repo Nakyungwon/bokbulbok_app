@@ -14,7 +14,7 @@ class GameService {
   final Map<String, AnimationController> pulseControllers = {};
   final Map<String, Animation<double>> pulseAnimations = {};
 
-  String? selectedPlayerId;
+  Set<String> selectedPlayerIds = {};
   bool isGameInProgress = false;
   Timer? selectionTimer;
   AnimationController? winnerController;
@@ -28,14 +28,14 @@ class GameService {
   int clickCounter = 0;
 
   // 룰렛 애니메이션 상태
-  String? highlightedPlayerId;
+  Set<String> highlightedPlayerIds = {}; // 다중 하이라이트 지원
   Timer? rouletteTimer;
   int rouletteStep = 0;
   int _totalRouletteSteps = 22; // 총 스텝 수 (랜덤 지속 시간에 따라 변경)
   String? _preselectedWinner;
 
   // 랜덤 모드 상태 (1바퀴 = 모든 참여자가 1번씩 하이라이트)
-  Set<String> _highlightedInRound = {};
+  final Set<String> _highlightedInRound = {};
   int _currentRound = 0;
 
   final TickerProvider vsync;
@@ -53,7 +53,8 @@ class GameService {
       vsync: vsync,
       duration: const Duration(seconds: 2),
     );
-    winnerAnimation = Tween<double>(begin: 0, end: 2000).animate(
+    // 화면 전체를 채울 수 있도록 충분히 큰 값 (화면 대각선의 2배 이상)
+    winnerAnimation = Tween<double>(begin: 0, end: 5000).animate(
       CurvedAnimation(
         parent: winnerController!,
         curve: Curves.easeOut,
@@ -64,7 +65,7 @@ class GameService {
       vsync: vsync,
       duration: const Duration(seconds: 2),
     );
-    gatheringAnimation = Tween<double>(begin: 2000, end: 0).animate(
+    gatheringAnimation = Tween<double>(begin: 5000, end: 0).animate(
       CurvedAnimation(
         parent: gatheringController!,
         curve: Curves.easeIn,
@@ -85,7 +86,7 @@ class GameService {
 
   void onPointerDown(PointerDownEvent event) {
     print('터치 다운: ${event.pointer} at ${event.position}'); // 디버그 로그
-    if (selectedPlayerId != null) return;
+    if (selectedPlayerIds.isNotEmpty) return;
     if (touches.length >= 20) return;
 
     final id = event.pointer.toString();
@@ -144,7 +145,7 @@ class GameService {
         if (status == AnimationStatus.completed) {
           pulseControllers[id]!.reverse();
         } else if (status == AnimationStatus.dismissed) {
-          if (selectedPlayerId == null) {
+          if (selectedPlayerIds.isEmpty) {
             pulseControllers[id]!.forward();
           }
         }
@@ -154,7 +155,7 @@ class GameService {
   }
 
   void onPointerMove(PointerMoveEvent event) {
-    if (selectedPlayerId != null) return;
+    if (selectedPlayerIds.isNotEmpty) return;
 
     final id = event.pointer.toString();
     if (touches.containsKey(id)) {
@@ -165,14 +166,16 @@ class GameService {
 
   void onPointerUp(PointerUpEvent event) {
     final id = event.pointer.toString();
-    print('[DEBUG] onPointerUp: id=$id, selectedPlayerId=$selectedPlayerId, isGameInProgress=$isGameInProgress');
+    print(
+        '[DEBUG] onPointerUp: id=$id, selectedPlayerIds=$selectedPlayerIds, isGameInProgress=$isGameInProgress');
 
-    if (selectedPlayerId != null) {
-      print('[DEBUG] onPointerUp: selectedPlayerId is set, returning early');
+    if (selectedPlayerIds.isNotEmpty) {
+      print('[DEBUG] onPointerUp: selectedPlayerIds is set, returning early');
       return;
     }
 
-    print('[DEBUG] onPointerUp: removing touch id=$id, _preselectedWinner=$_preselectedWinner');
+    print(
+        '[DEBUG] onPointerUp: removing touch id=$id, _preselectedWinner=$_preselectedWinner');
     touches.remove(id);
     colors.remove(id);
 
@@ -190,7 +193,8 @@ class GameService {
       _checkAndStartGame();
     } else if (touches.isEmpty) {
       // 룰렛 중 모든 참여자가 나감
-      print('[DEBUG] onPointerUp: all participants left during roulette, resetting');
+      print(
+          '[DEBUG] onPointerUp: all participants left during roulette, resetting');
       rouletteTimer?.cancel();
       reset();
     } else {
@@ -199,12 +203,19 @@ class GameService {
       if (_preselectedWinner == id) {
         // 미리 선정된 당첨자가 나감 - 새로운 당첨자 선정
         _preselectedWinner = keys[Random().nextInt(keys.length)];
-        print('[DEBUG] onPointerUp: preselected winner left, new winner=$_preselectedWinner');
+        print(
+            '[DEBUG] onPointerUp: preselected winner left, new winner=$_preselectedWinner');
       }
-      if (highlightedPlayerId == id) {
-        // 하이라이트된 참여자가 나감 - 다른 참여자로 변경
-        highlightedPlayerId = keys[Random().nextInt(keys.length)];
-        print('[DEBUG] onPointerUp: highlighted player left, new highlight=$highlightedPlayerId');
+      // 하이라이트된 참여자가 나감 - 다른 참여자로 교체
+      if (highlightedPlayerIds.contains(id)) {
+        highlightedPlayerIds.remove(id);
+        // 남은 참여자 중에서 하이라이트되지 않은 참여자로 교체
+        final available = keys.where((k) => !highlightedPlayerIds.contains(k)).toList();
+        if (available.isNotEmpty) {
+          highlightedPlayerIds.add(available[Random().nextInt(available.length)]);
+        }
+        print(
+            '[DEBUG] onPointerUp: highlighted player left, new highlights=$highlightedPlayerIds');
       }
       // 랜덤 모드: 나간 참여자를 하이라이트 기록에서 제거
       _highlightedInRound.remove(id);
@@ -215,7 +226,7 @@ class GameService {
   }
 
   void _checkAndStartGame() {
-    if (!isGameInProgress && touches.isNotEmpty && selectedPlayerId == null) {
+    if (!isGameInProgress && touches.isNotEmpty && selectedPlayerIds.isEmpty) {
       _startSelection();
     }
   }
@@ -228,7 +239,8 @@ class GameService {
   }
 
   void _startSelection() {
-    print('[DEBUG] _startSelection called, touches=${touches.keys.toList()}, mode=${GameSettings.gameMode}');
+    print(
+        '[DEBUG] _startSelection called, touches=${touches.keys.toList()}, mode=${GameSettings.gameMode}');
     isGameInProgress = true;
 
     if (GameSettings.gameMode == GameMode.defaultMode) {
@@ -237,15 +249,18 @@ class GameService {
         final random = Random();
         final keys = touches.keys.toList();
         _preselectedWinner = keys[random.nextInt(keys.length)];
-        print('[DEBUG] _startSelection (default): _preselectedWinner=$_preselectedWinner');
+        print(
+            '[DEBUG] _startSelection (default): _preselectedWinner=$_preselectedWinner');
       }
       selectionTimer = Timer(
         Duration(milliseconds: (GameSettings.countdownTime * 1000).round()),
         _finalizeSelectionDefault,
       );
-    } else if (GameSettings.gameMode == GameMode.clockMode) {
-      // 시계 모드: 1초 대기 후 룰렛 애니메이션 시작
+    } else if (GameSettings.gameMode == GameMode.rouletteMode) {
+      // 룰렛 모드: 1초 대기 후 룰렛 애니메이션 시작
       _preselectedWinner = null;
+      _highlightedInRound.clear();
+      _currentRound = 0;
       selectionTimer = Timer(
         const Duration(seconds: 1),
         () {
@@ -254,32 +269,32 @@ class GameService {
           }
         },
       );
-    } else if (GameSettings.gameMode == GameMode.randomMode) {
-      // 랜덤 모드: 1초 대기 후 랜덤 룰렛 애니메이션 시작
-      _preselectedWinner = null;
-      _highlightedInRound.clear();
-      _currentRound = 0;
-      selectionTimer = Timer(
-        const Duration(seconds: 1),
-        () {
-          if (isGameInProgress && touches.isNotEmpty) {
-            _startRandomRouletteAnimation();
-          }
-        },
-      );
     }
     onStateChanged();
   }
 
   void _finalizeSelectionDefault() {
-    // 기본 모드: 미리 선정된 당첨자로 바로 결과 표시
-    selectedPlayerId = _preselectedWinner;
+    // 기본 모드: 랜덤으로 당첨자 선정
     _preselectedWinner = null;
+    selectedPlayerIds.clear();
 
-    print('[DEBUG] _finalizeSelectionDefault: selectedPlayerId=$selectedPlayerId');
+    // 당첨 인원 수 결정 (참여자보다 많을 수 없음)
+    final winnerCount = GameSettings.winnerCount.clamp(1, touches.length);
+    final keys = touches.keys.toList();
+    final random = Random();
 
-    if (selectedPlayerId == null || !touches.containsKey(selectedPlayerId)) {
-      print('[DEBUG] _finalizeSelectionDefault: invalid winner, resetting');
+    // 랜덤으로 당첨자들 선정
+    while (selectedPlayerIds.length < winnerCount && keys.isNotEmpty) {
+      final index = random.nextInt(keys.length);
+      selectedPlayerIds.add(keys[index]);
+      keys.removeAt(index);
+    }
+
+    print(
+        '[DEBUG] _finalizeSelectionDefault: selectedPlayerIds=$selectedPlayerIds');
+
+    if (selectedPlayerIds.isEmpty) {
+      print('[DEBUG] _finalizeSelectionDefault: invalid winners, resetting');
       reset();
       return;
     }
@@ -302,7 +317,7 @@ class GameService {
       Timer(
         Duration(milliseconds: (GameSettings.countdownTime * 1000).round()),
         () {
-          if (selectedPlayerId != null) {
+          if (selectedPlayerIds.isNotEmpty) {
             _startGatheringAnimation();
           }
         },
@@ -315,8 +330,8 @@ class GameService {
   void _startLoserImageAnimation({required VoidCallback onComplete}) {
     showLoserImage = true;
     loserImageController?.forward(from: 0);
-    // 이미지 애니메이션 중간에 winner 애니메이션 시작 (거의 동시에)
-    Future.delayed(const Duration(milliseconds: 25), () {
+    // 이미지 애니메이션 중간에 winner 애니메이션 시작
+    Future.delayed(const Duration(milliseconds: 150), () {
       onComplete();
     });
   }
@@ -324,134 +339,42 @@ class GameService {
   void _startRouletteAnimation() {
     print('[DEBUG] _startRouletteAnimation called');
     rouletteStep = 0;
+    _highlightedInRound.clear();
+    _currentRound = 1;
+    highlightedPlayerIds.clear();
 
-    // 3~5초 사이 랜덤 지속 시간 설정 (스텝 수로 변환)
-    // 기본 22스텝 = 약 2.7초, 비율로 계산
+    // 3~5초 사이 랜덤 지속 시간 설정
     final random = Random();
-    final durationSeconds = 3.0 + random.nextDouble() * 2.0; // 3~5초
+    final durationSeconds = 3.0 + random.nextDouble() * 2.0;
     _totalRouletteSteps = (22 * durationSeconds / 2.7).round();
-    print('[DEBUG] _startRouletteAnimation: duration=${durationSeconds.toStringAsFixed(1)}s, totalSteps=$_totalRouletteSteps');
+    print(
+        '[DEBUG] _startRouletteAnimation: duration=${durationSeconds.toStringAsFixed(1)}s, totalSteps=$_totalRouletteSteps');
 
-    // 랜덤 시작점 설정
+    // 다중 하이라이트: winnerCount만큼 랜덤 시작점 설정
     if (touches.isNotEmpty) {
       final keys = touches.keys.toList();
-      highlightedPlayerId = keys[random.nextInt(keys.length)];
-      print('[DEBUG] _startRouletteAnimation: random start at $highlightedPlayerId');
+      final highlightCount = GameSettings.winnerCount.clamp(1, keys.length);
+
+      // 랜덤으로 highlightCount명 선택
+      final shuffled = List<String>.from(keys)..shuffle(random);
+      for (int i = 0; i < highlightCount; i++) {
+        highlightedPlayerIds.add(shuffled[i]);
+        _highlightedInRound.add(shuffled[i]);
+      }
+      print(
+          '[DEBUG] _startRouletteAnimation: random start at $highlightedPlayerIds, round=$_currentRound');
     }
 
     _rouletteStep();
   }
 
   void _rouletteStep() {
-    print('[DEBUG] _rouletteStep called: step=$rouletteStep, totalSteps=$_totalRouletteSteps, highlightedPlayerId=$highlightedPlayerId');
+    print(
+        '[DEBUG] _rouletteStep called: step=$rouletteStep, totalSteps=$_totalRouletteSteps, round=$_currentRound');
     if (touches.isEmpty) {
-      print('[DEBUG] _rouletteStep: no touches, calling _finalizeSelectionClock');
-      _finalizeSelectionClock();
-      return;
-    }
-
-    // 간격 계산: 진행률에 따라 점점 느려짐
-    final progress = rouletteStep / _totalRouletteSteps;
-    int interval;
-    if (progress < 0.45) {
-      interval = 50; // 초반 45%: 매우 빠름
-    } else if (progress < 0.65) {
-      interval = 100; // 45-65%: 빠름
-    } else if (progress < 0.80) {
-      interval = 166; // 65-80%: 중간
-    } else if (progress < 0.90) {
-      interval = 250; // 80-90%: 느림
-    } else if (progress < 1.0) {
-      interval = 350; // 90-100%: 매우 느림
-    } else {
-      // 마지막 스텝: 현재 하이라이트된 참여자가 당첨자
-      // 이미 최종 스텝에 도달했으면 중복 실행 방지
-      if (rouletteStep > _totalRouletteSteps) {
-        print('[DEBUG] _rouletteStep: already past final step, ignoring');
-        return;
-      }
-      rouletteStep = 999; // 중복 실행 방지를 위해 큰 값으로 설정
-
-      print('[DEBUG] _rouletteStep: FINAL step reached, winner will be highlightedPlayerId=$highlightedPlayerId');
-
-      // 기존 타이머 취소
-      rouletteTimer?.cancel();
-
-      rouletteTimer = Timer(const Duration(milliseconds: 300), () {
-        print('[DEBUG] 300ms timer fired, calling _finalizeSelectionClock');
-        _finalizeSelectionClock();
-      });
-
-      onStateChanged();
-      return;
-    }
-
-    // 시계방향으로 다음 참여자 선택
-    final keys = touches.keys.toList();
-    if (keys.length > 1) {
-      // 중심점 계산
-      double centerX = 0, centerY = 0;
-      for (var key in keys) {
-        centerX += touches[key]!.dx;
-        centerY += touches[key]!.dy;
-      }
-      centerX /= keys.length;
-      centerY /= keys.length;
-
-      // 각도 기준으로 정렬 (시계방향: 12시부터 시작)
-      keys.sort((a, b) {
-        final angleA = atan2(touches[a]!.dy - centerY, touches[a]!.dx - centerX);
-        final angleB = atan2(touches[b]!.dy - centerY, touches[b]!.dx - centerX);
-        return angleA.compareTo(angleB);
-      });
-
-      // 현재 하이라이트의 인덱스 찾기
-      int currentIndex = keys.indexOf(highlightedPlayerId ?? keys.first);
-      if (currentIndex == -1) currentIndex = 0;
-
-      // 다음 인덱스로 이동 (시계방향)
-      int nextIndex = (currentIndex + 1) % keys.length;
-      highlightedPlayerId = keys[nextIndex];
-    } else {
-      highlightedPlayerId = keys.first;
-    }
-
-    onStateChanged();
-    rouletteStep++;
-
-    // 기존 타이머 취소 후 새 타이머 설정
-    rouletteTimer?.cancel();
-    rouletteTimer = Timer(Duration(milliseconds: interval), _rouletteStep);
-  }
-
-  void _startRandomRouletteAnimation() {
-    print('[DEBUG] _startRandomRouletteAnimation called');
-    rouletteStep = 0;
-    _highlightedInRound.clear();
-    _currentRound = 1;
-
-    // 3~5초 사이 랜덤 지속 시간 설정
-    final random = Random();
-    final durationSeconds = 3.0 + random.nextDouble() * 2.0;
-    _totalRouletteSteps = (22 * durationSeconds / 2.7).round();
-    print('[DEBUG] _startRandomRouletteAnimation: duration=${durationSeconds.toStringAsFixed(1)}s, totalSteps=$_totalRouletteSteps');
-
-    // 랜덤 시작점 설정
-    if (touches.isNotEmpty) {
-      final keys = touches.keys.toList();
-      highlightedPlayerId = keys[random.nextInt(keys.length)];
-      _highlightedInRound.add(highlightedPlayerId!);
-      print('[DEBUG] _startRandomRouletteAnimation: random start at $highlightedPlayerId, round=$_currentRound');
-    }
-
-    _randomRouletteStep();
-  }
-
-  void _randomRouletteStep() {
-    print('[DEBUG] _randomRouletteStep called: step=$rouletteStep, totalSteps=$_totalRouletteSteps, round=$_currentRound');
-    if (touches.isEmpty) {
-      print('[DEBUG] _randomRouletteStep: no touches, calling _finalizeSelectionRandom');
-      _finalizeSelectionRandom();
+      print(
+          '[DEBUG] _rouletteStep: no touches, calling _finalizeSelectionRoulette');
+      _finalizeSelectionRoulette();
       return;
     }
 
@@ -471,70 +394,111 @@ class GameService {
     } else {
       // 마지막 스텝
       if (rouletteStep > _totalRouletteSteps) {
-        print('[DEBUG] _randomRouletteStep: already past final step, ignoring');
+        print('[DEBUG] _rouletteStep: already past final step, ignoring');
         return;
       }
       rouletteStep = 999;
 
-      print('[DEBUG] _randomRouletteStep: FINAL step reached, winner=$highlightedPlayerId');
+      print(
+          '[DEBUG] _rouletteStep: FINAL step reached, winners=$highlightedPlayerIds');
 
       rouletteTimer?.cancel();
       rouletteTimer = Timer(const Duration(milliseconds: 300), () {
-        print('[DEBUG] 300ms timer fired, calling _finalizeSelectionRandom');
-        _finalizeSelectionRandom();
+        print('[DEBUG] 300ms timer fired, calling _finalizeSelectionRoulette');
+        _finalizeSelectionRoulette();
       });
 
       onStateChanged();
       return;
     }
 
-    // 랜덤으로 다음 참여자 선택 (1바퀴 내 중복 방지)
+    // 다중 하이라이트: 각 하이라이트를 랜덤하게 다른 참여자로 이동
     final keys = touches.keys.toList();
-    if (keys.length > 1) {
-      // 현재 바퀴에서 아직 하이라이트되지 않은 참여자들
-      final availableKeys = keys.where((k) => !_highlightedInRound.contains(k)).toList();
+    final highlightCount = GameSettings.winnerCount.clamp(1, keys.length);
+    final random = Random();
 
-      if (availableKeys.isEmpty) {
-        // 모든 참여자가 하이라이트됨 -> 새 바퀴 시작
+    if (keys.length > highlightCount) {
+      // 현재 바퀴에서 아직 하이라이트되지 않은 참여자들
+      final availableKeys =
+          keys.where((k) => !_highlightedInRound.contains(k)).toList();
+
+      if (availableKeys.length < highlightCount) {
+        // 새 바퀴 시작
         _highlightedInRound.clear();
         _currentRound++;
-        print('[DEBUG] _randomRouletteStep: new round started, round=$_currentRound');
-        // 새 바퀴에서 현재 하이라이트된 참여자 제외하고 선택
-        final newAvailable = keys.where((k) => k != highlightedPlayerId).toList();
-        if (newAvailable.isNotEmpty) {
-          highlightedPlayerId = newAvailable[Random().nextInt(newAvailable.length)];
-        }
-      } else {
-        // 아직 하이라이트되지 않은 참여자 중 랜덤 선택
-        highlightedPlayerId = availableKeys[Random().nextInt(availableKeys.length)];
+        print('[DEBUG] _rouletteStep: new round started, round=$_currentRound');
       }
-      _highlightedInRound.add(highlightedPlayerId!);
-      print('[DEBUG] _randomRouletteStep: highlighted=$highlightedPlayerId, highlightedInRound=$_highlightedInRound');
+
+      // 새로운 하이라이트 선택 (현재 하이라이트 제외)
+      final newAvailable = keys.where((k) => !highlightedPlayerIds.contains(k)).toList();
+      final newHighlighted = <String>{};
+
+      // 랜덤하게 highlightCount명 선택
+      final shuffled = List<String>.from(newAvailable)..shuffle(random);
+      for (int i = 0; i < highlightCount && i < shuffled.length; i++) {
+        newHighlighted.add(shuffled[i]);
+        _highlightedInRound.add(shuffled[i]);
+      }
+
+      // 새로운 참여자가 부족하면 기존 하이라이트에서 일부 유지
+      if (newHighlighted.length < highlightCount) {
+        final remaining = highlightCount - newHighlighted.length;
+        final oldHighlighted = highlightedPlayerIds.toList()..shuffle(random);
+        for (int i = 0; i < remaining && i < oldHighlighted.length; i++) {
+          newHighlighted.add(oldHighlighted[i]);
+        }
+      }
+
+      highlightedPlayerIds = newHighlighted;
+      print(
+          '[DEBUG] _rouletteStep: highlighted=$highlightedPlayerIds, highlightedInRound=$_highlightedInRound');
     } else {
-      highlightedPlayerId = keys.first;
+      // 참여자 수가 당첨 인원과 같거나 적으면 모두 하이라이트
+      highlightedPlayerIds = keys.toSet();
     }
 
     onStateChanged();
     rouletteStep++;
 
     rouletteTimer?.cancel();
-    rouletteTimer = Timer(Duration(milliseconds: interval), _randomRouletteStep);
+    rouletteTimer = Timer(Duration(milliseconds: interval), _rouletteStep);
   }
 
-  void _finalizeSelectionRandom() {
-    // 랜덤 모드: 현재 하이라이트된 참여자가 당첨자
+  void _finalizeSelectionRoulette() {
+    // 룰렛 모드: 현재 하이라이트된 참여자들이 당첨자
     rouletteTimer?.cancel();
     rouletteStep = 0;
     _highlightedInRound.clear();
     _currentRound = 0;
 
-    selectedPlayerId = highlightedPlayerId;
-    highlightedPlayerId = null;
+    selectedPlayerIds.clear();
 
-    print('[DEBUG] _finalizeSelectionRandom: selectedPlayerId=$selectedPlayerId');
+    // 당첨 인원 수 결정
+    final winnerCount = GameSettings.winnerCount.clamp(1, touches.length);
 
-    if (selectedPlayerId == null || !touches.containsKey(selectedPlayerId)) {
-      print('[DEBUG] _finalizeSelectionRandom: invalid winner, resetting');
+    // 하이라이트된 참여자들이 당첨자 (유효한 참여자만)
+    for (final id in highlightedPlayerIds) {
+      if (touches.containsKey(id)) {
+        selectedPlayerIds.add(id);
+      }
+    }
+    highlightedPlayerIds.clear();
+
+    // 당첨자 수가 부족하면 추가 선정
+    final keys =
+        touches.keys.where((k) => !selectedPlayerIds.contains(k)).toList();
+    final random = Random();
+    while (selectedPlayerIds.length < winnerCount && keys.isNotEmpty) {
+      final index = random.nextInt(keys.length);
+      selectedPlayerIds.add(keys[index]);
+      keys.removeAt(index);
+    }
+
+    print(
+        '[DEBUG] _finalizeSelectionRoulette: selectedPlayerIds=$selectedPlayerIds');
+
+    if (selectedPlayerIds.isEmpty) {
+      print('[DEBUG] _finalizeSelectionRoulette: invalid winners, resetting');
       reset();
       return;
     }
@@ -551,60 +515,14 @@ class GameService {
 
     // 패배자 이미지 애니메이션 시작 -> 완료 후 winner 애니메이션
     _startLoserImageAnimation(onComplete: () {
-      print('[DEBUG] _finalizeSelectionRandom: starting winnerController animation');
+      print(
+          '[DEBUG] _finalizeSelectionRoulette: starting winnerController animation');
       winnerController?.forward(from: 0);
 
       Timer(
         Duration(milliseconds: (GameSettings.countdownTime * 1000).round()),
         () {
-          if (selectedPlayerId != null) {
-            _startGatheringAnimation();
-          }
-        },
-      );
-    });
-
-    onStateChanged();
-  }
-
-  void _finalizeSelectionClock() {
-    // 시계 모드: 현재 하이라이트된 참여자가 당첨자
-    rouletteTimer?.cancel();
-    rouletteStep = 0;
-
-    // highlightedPlayerId가 당첨자
-    selectedPlayerId = highlightedPlayerId;
-    highlightedPlayerId = null;
-
-    print('[DEBUG] _finalizeSelectionClock: selectedPlayerId=$selectedPlayerId');
-    print('[DEBUG] _finalizeSelectionClock: touches.keys=${touches.keys.toList()}');
-
-    if (selectedPlayerId == null || !touches.containsKey(selectedPlayerId)) {
-      print('[DEBUG] _finalizeSelectionClock: invalid winner, resetting');
-      reset();
-      return;
-    }
-
-    // 맥박 애니메이션 중단
-    for (var controller in pulseControllers.values) {
-      controller.stop();
-    }
-
-    // 진동 피드백
-    if (GameSettings.hapticFeedback) {
-      _triggerIntenseVibration();
-    }
-
-    // 패배자 이미지 애니메이션 시작 -> 완료 후 winner 애니메이션
-    _startLoserImageAnimation(onComplete: () {
-      print('[DEBUG] _finalizeSelectionClock: starting winnerController animation');
-      winnerController?.forward(from: 0);
-
-      // 역방향 애니메이션 시작
-      Timer(
-        Duration(milliseconds: (GameSettings.countdownTime * 1000).round()),
-        () {
-          if (selectedPlayerId != null) {
+          if (selectedPlayerIds.isNotEmpty) {
             _startGatheringAnimation();
           }
         },
@@ -620,7 +538,7 @@ class GameService {
         vsync: vsync,
         duration: const Duration(seconds: 2),
       );
-      gatheringAnimation = Tween<double>(begin: 2000, end: 0).animate(
+      gatheringAnimation = Tween<double>(begin: 5000, end: 0).animate(
         CurvedAnimation(
           parent: gatheringController!,
           curve: Curves.easeIn,
@@ -638,14 +556,14 @@ class GameService {
   void reset() {
     touches.clear();
     colors.clear();
-    selectedPlayerId = null;
+    selectedPlayerIds.clear();
     isGameInProgress = false;
     isGathering = false;
     clickCounter = 0;
 
     // 룰렛 상태 초기화
     rouletteTimer?.cancel();
-    highlightedPlayerId = null;
+    highlightedPlayerIds.clear();
     rouletteStep = 0;
     _totalRouletteSteps = 22;
     _preselectedWinner = null;
