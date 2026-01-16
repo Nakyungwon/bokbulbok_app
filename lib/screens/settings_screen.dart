@@ -37,6 +37,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
+            const Text(
+              '게임 모드',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            SegmentedButton<GameMode>(
+              segments: const [
+                ButtonSegment<GameMode>(
+                  value: GameMode.defaultMode,
+                  label: Text('기본'),
+                  icon: Icon(Icons.touch_app),
+                ),
+                ButtonSegment<GameMode>(
+                  value: GameMode.clockMode,
+                  label: Text('시계'),
+                  icon: Icon(Icons.access_time),
+                ),
+                ButtonSegment<GameMode>(
+                  value: GameMode.randomMode,
+                  label: Text('랜덤'),
+                  icon: Icon(Icons.shuffle),
+                ),
+              ],
+              selected: {GameSettings.gameMode},
+              onSelectionChanged: (Set<GameMode> selection) async {
+                await GameSettings.setGameMode(selection.first);
+                setState(() {});
+              },
+            ),
+            const SizedBox(height: 8),
+            Text(
+              GameSettings.gameMode == GameMode.defaultMode
+                  ? '랜덤으로 당첨자를 선택합니다'
+                  : GameSettings.gameMode == GameMode.clockMode
+                      ? '시계방향으로 돌아가며 당첨자를 선택합니다'
+                      : '랜덤 순서로 돌아가며 당첨자를 선택합니다 (1바퀴 = 모두 1번씩)',
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            const SizedBox(height: 20),
             SwitchListTile(
               title: const Text('진동 피드백'),
               subtitle: const Text('승자가 선택될 때 진동을 울립니다'),
@@ -78,12 +117,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 20),
             const Text(
-              '당첨까지 걸리는 시간',
+              '당첨까지 걸리는 시간 (기본 모드)',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
             Text(
-              '현재: ${GameSettings.countdownTime.toStringAsFixed(1)}초',
+              '현재: ${GameSettings.countdownTime.toStringAsFixed(1)}초 (시계 모드는 3~5초 랜덤)',
               style: const TextStyle(fontSize: 14, color: Colors.grey),
             ),
             Slider(
