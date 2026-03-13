@@ -51,32 +51,33 @@ class GameService {
   void _initializeControllers() {
     winnerController = AnimationController(
       vsync: vsync,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(milliseconds: 500),
     );
-    // 화면 전체를 채울 수 있도록 충분히 큰 값 (화면 대각선의 2배 이상)
-    winnerAnimation = Tween<double>(begin: 0, end: 5000).animate(
+    // 화면 대각선 길이의 약 2배 (어느 위치에서든 화면을 채울 수 있는 크기)
+    winnerAnimation = Tween<double>(begin: 0, end: 2000).animate(
       CurvedAnimation(
         parent: winnerController!,
-        curve: Curves.easeOut,
+        curve: Curves.linear,
       ),
     );
 
     gatheringController = AnimationController(
       vsync: vsync,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(milliseconds: 500),
     );
-    gatheringAnimation = Tween<double>(begin: 5000, end: 0).animate(
+    gatheringAnimation = Tween<double>(begin: 2000, end: 0).animate(
       CurvedAnimation(
         parent: gatheringController!,
-        curve: Curves.easeIn,
+        curve: Curves.linear,
       ),
     );
 
     loserImageController = AnimationController(
       vsync: vsync,
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 500),
     );
-    loserImageAnimation = Tween<double>(begin: 0, end: 1).animate(
+    // 1.0 -> 0.0: 페이드아웃용 (시작 시 opacity 1.0, forward하면 0.0으로)
+    loserImageAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
       CurvedAnimation(
         parent: loserImageController!,
         curve: Curves.easeOut,
@@ -85,7 +86,7 @@ class GameService {
   }
 
   void onPointerDown(PointerDownEvent event) {
-    print('터치 다운: ${event.pointer} at ${event.position}'); // 디버그 로그
+    // print('터치 다운: ${event.pointer} at ${event.position}'); // 디버그 로그
     if (selectedPlayerIds.isNotEmpty) return;
     if (touches.length >= 20) return;
 
@@ -95,7 +96,7 @@ class GameService {
     colors[id] = ColorUtils.generateUniqueColor(colors);
     clickCounter++;
 
-    print('터치 추가됨: $id, 총 터치 수: ${touches.length}'); // 디버그 로그
+    // print('터치 추가됨: $id, 총 터치 수: ${touches.length}'); // 디버그 로그
 
     _createParticipantAnimation(id);
     // 기본 모드에서만 맥박 애니메이션 실행
@@ -166,16 +167,14 @@ class GameService {
 
   void onPointerUp(PointerUpEvent event) {
     final id = event.pointer.toString();
-    print(
-        '[DEBUG] onPointerUp: id=$id, selectedPlayerIds=$selectedPlayerIds, isGameInProgress=$isGameInProgress');
+    // print('[DEBUG] onPointerUp: id=$id, selectedPlayerIds=$selectedPlayerIds, isGameInProgress=$isGameInProgress');
 
     if (selectedPlayerIds.isNotEmpty) {
-      print('[DEBUG] onPointerUp: selectedPlayerIds is set, returning early');
+      // print('[DEBUG] onPointerUp: selectedPlayerIds is set, returning early');
       return;
     }
 
-    print(
-        '[DEBUG] onPointerUp: removing touch id=$id, _preselectedWinner=$_preselectedWinner');
+    // print('[DEBUG] onPointerUp: removing touch id=$id, _preselectedWinner=$_preselectedWinner');
     touches.remove(id);
     colors.remove(id);
 
@@ -193,8 +192,7 @@ class GameService {
       _checkAndStartGame();
     } else if (touches.isEmpty) {
       // 룰렛 중 모든 참여자가 나감
-      print(
-          '[DEBUG] onPointerUp: all participants left during roulette, resetting');
+      // print('[DEBUG] onPointerUp: all participants left during roulette, resetting');
       rouletteTimer?.cancel();
       reset();
     } else {
@@ -203,8 +201,7 @@ class GameService {
       if (_preselectedWinner == id) {
         // 미리 선정된 당첨자가 나감 - 새로운 당첨자 선정
         _preselectedWinner = keys[Random().nextInt(keys.length)];
-        print(
-            '[DEBUG] onPointerUp: preselected winner left, new winner=$_preselectedWinner');
+        // print('[DEBUG] onPointerUp: preselected winner left, new winner=$_preselectedWinner');
       }
       // 하이라이트된 참여자가 나감 - 다른 참여자로 교체
       if (highlightedPlayerIds.contains(id)) {
@@ -214,14 +211,13 @@ class GameService {
         if (available.isNotEmpty) {
           highlightedPlayerIds.add(available[Random().nextInt(available.length)]);
         }
-        print(
-            '[DEBUG] onPointerUp: highlighted player left, new highlights=$highlightedPlayerIds');
+        // print('[DEBUG] onPointerUp: highlighted player left, new highlights=$highlightedPlayerIds');
       }
       // 랜덤 모드: 나간 참여자를 하이라이트 기록에서 제거
       _highlightedInRound.remove(id);
     }
 
-    print('[DEBUG] onPointerUp: remaining touches=${touches.keys.toList()}');
+    // print('[DEBUG] onPointerUp: remaining touches=${touches.keys.toList()}');
     onStateChanged();
   }
 
@@ -239,8 +235,7 @@ class GameService {
   }
 
   void _startSelection() {
-    print(
-        '[DEBUG] _startSelection called, touches=${touches.keys.toList()}, mode=${GameSettings.gameMode}');
+    // print('[DEBUG] _startSelection called, touches=${touches.keys.toList()}, mode=${GameSettings.gameMode}');
     isGameInProgress = true;
 
     if (GameSettings.gameMode == GameMode.defaultMode) {
@@ -249,8 +244,7 @@ class GameService {
         final random = Random();
         final keys = touches.keys.toList();
         _preselectedWinner = keys[random.nextInt(keys.length)];
-        print(
-            '[DEBUG] _startSelection (default): _preselectedWinner=$_preselectedWinner');
+        // print('[DEBUG] _startSelection (default): _preselectedWinner=$_preselectedWinner');
       }
       selectionTimer = Timer(
         Duration(milliseconds: (GameSettings.countdownTime * 1000).round()),
@@ -262,7 +256,7 @@ class GameService {
       _highlightedInRound.clear();
       _currentRound = 0;
       selectionTimer = Timer(
-        const Duration(seconds: 1),
+        const Duration(milliseconds: 500),
         () {
           if (isGameInProgress && touches.isNotEmpty) {
             _startRouletteAnimation();
@@ -290,11 +284,10 @@ class GameService {
       keys.removeAt(index);
     }
 
-    print(
-        '[DEBUG] _finalizeSelectionDefault: selectedPlayerIds=$selectedPlayerIds');
+    // print('[DEBUG] _finalizeSelectionDefault: selectedPlayerIds=$selectedPlayerIds');
 
     if (selectedPlayerIds.isEmpty) {
-      print('[DEBUG] _finalizeSelectionDefault: invalid winners, resetting');
+      // print('[DEBUG] _finalizeSelectionDefault: invalid winners, resetting');
       reset();
       return;
     }
@@ -309,35 +302,27 @@ class GameService {
       _triggerIntenseVibration();
     }
 
-    // 패배자 이미지 애니메이션 시작 -> 완료 후 winner 애니메이션
-    _startLoserImageAnimation(onComplete: () {
-      winnerController?.forward(from: 0);
-
-      // 역방향 애니메이션 시작
-      Timer(
-        Duration(milliseconds: (GameSettings.countdownTime * 1000).round()),
-        () {
-          if (selectedPlayerIds.isNotEmpty) {
-            _startGatheringAnimation();
-          }
-        },
-      );
-    });
+    // winner 애니메이션 완료 시 바로 gathering 시작
+    print('[TIMING] 확장 시작: ${DateTime.now().millisecondsSinceEpoch}');
+    print('[TIMING] winnerController duration: ${winnerController?.duration}');
+    void onWinnerComplete(AnimationStatus status) {
+      print('[TIMING] winnerController status changed: $status at ${DateTime.now().millisecondsSinceEpoch}');
+      if (status == AnimationStatus.completed) {
+        print('[TIMING] 확장 완료 → gathering 호출: ${DateTime.now().millisecondsSinceEpoch}');
+        winnerController?.removeStatusListener(onWinnerComplete);
+        if (selectedPlayerIds.isNotEmpty) {
+          _startGatheringAnimation();
+        }
+      }
+    }
+    winnerController?.addStatusListener(onWinnerComplete);
+    winnerController?.forward(from: 0);
 
     onStateChanged();
   }
 
-  void _startLoserImageAnimation({required VoidCallback onComplete}) {
-    showLoserImage = true;
-    loserImageController?.forward(from: 0);
-    // 이미지 애니메이션 중간에 winner 애니메이션 시작
-    Future.delayed(const Duration(milliseconds: 150), () {
-      onComplete();
-    });
-  }
-
   void _startRouletteAnimation() {
-    print('[DEBUG] _startRouletteAnimation called');
+    // print('[DEBUG] _startRouletteAnimation called');
     rouletteStep = 0;
     _highlightedInRound.clear();
     _currentRound = 1;
@@ -347,8 +332,7 @@ class GameService {
     final random = Random();
     final durationSeconds = 3.0 + random.nextDouble() * 2.0;
     _totalRouletteSteps = (22 * durationSeconds / 2.7).round();
-    print(
-        '[DEBUG] _startRouletteAnimation: duration=${durationSeconds.toStringAsFixed(1)}s, totalSteps=$_totalRouletteSteps');
+    // print('[DEBUG] _startRouletteAnimation: duration=${durationSeconds.toStringAsFixed(1)}s, totalSteps=$_totalRouletteSteps');
 
     // 다중 하이라이트: winnerCount만큼 랜덤 시작점 설정
     if (touches.isNotEmpty) {
@@ -361,19 +345,16 @@ class GameService {
         highlightedPlayerIds.add(shuffled[i]);
         _highlightedInRound.add(shuffled[i]);
       }
-      print(
-          '[DEBUG] _startRouletteAnimation: random start at $highlightedPlayerIds, round=$_currentRound');
+      // print('[DEBUG] _startRouletteAnimation: random start at $highlightedPlayerIds, round=$_currentRound');
     }
 
     _rouletteStep();
   }
 
   void _rouletteStep() {
-    print(
-        '[DEBUG] _rouletteStep called: step=$rouletteStep, totalSteps=$_totalRouletteSteps, round=$_currentRound');
+    // print('[DEBUG] _rouletteStep called: step=$rouletteStep, totalSteps=$_totalRouletteSteps, round=$_currentRound');
     if (touches.isEmpty) {
-      print(
-          '[DEBUG] _rouletteStep: no touches, calling _finalizeSelectionRoulette');
+      // print('[DEBUG] _rouletteStep: no touches, calling _finalizeSelectionRoulette');
       _finalizeSelectionRoulette();
       return;
     }
@@ -394,17 +375,16 @@ class GameService {
     } else {
       // 마지막 스텝
       if (rouletteStep > _totalRouletteSteps) {
-        print('[DEBUG] _rouletteStep: already past final step, ignoring');
+        // print('[DEBUG] _rouletteStep: already past final step, ignoring');
         return;
       }
       rouletteStep = 999;
 
-      print(
-          '[DEBUG] _rouletteStep: FINAL step reached, winners=$highlightedPlayerIds');
+      // print('[DEBUG] _rouletteStep: FINAL step reached, winners=$highlightedPlayerIds');
 
       rouletteTimer?.cancel();
       rouletteTimer = Timer(const Duration(milliseconds: 300), () {
-        print('[DEBUG] 300ms timer fired, calling _finalizeSelectionRoulette');
+        // print('[DEBUG] 300ms timer fired, calling _finalizeSelectionRoulette');
         _finalizeSelectionRoulette();
       });
 
@@ -426,7 +406,7 @@ class GameService {
         // 새 바퀴 시작
         _highlightedInRound.clear();
         _currentRound++;
-        print('[DEBUG] _rouletteStep: new round started, round=$_currentRound');
+        // print('[DEBUG] _rouletteStep: new round started, round=$_currentRound');
       }
 
       // 새로운 하이라이트 선택 (현재 하이라이트 제외)
@@ -450,8 +430,7 @@ class GameService {
       }
 
       highlightedPlayerIds = newHighlighted;
-      print(
-          '[DEBUG] _rouletteStep: highlighted=$highlightedPlayerIds, highlightedInRound=$_highlightedInRound');
+      // print('[DEBUG] _rouletteStep: highlighted=$highlightedPlayerIds, highlightedInRound=$_highlightedInRound');
     } else {
       // 참여자 수가 당첨 인원과 같거나 적으면 모두 하이라이트
       highlightedPlayerIds = keys.toSet();
@@ -494,11 +473,10 @@ class GameService {
       keys.removeAt(index);
     }
 
-    print(
-        '[DEBUG] _finalizeSelectionRoulette: selectedPlayerIds=$selectedPlayerIds');
+    // print('[DEBUG] _finalizeSelectionRoulette: selectedPlayerIds=$selectedPlayerIds');
 
     if (selectedPlayerIds.isEmpty) {
-      print('[DEBUG] _finalizeSelectionRoulette: invalid winners, resetting');
+      // print('[DEBUG] _finalizeSelectionRoulette: invalid winners, resetting');
       reset();
       return;
     }
@@ -513,21 +491,18 @@ class GameService {
       _triggerIntenseVibration();
     }
 
-    // 패배자 이미지 애니메이션 시작 -> 완료 후 winner 애니메이션
-    _startLoserImageAnimation(onComplete: () {
-      print(
-          '[DEBUG] _finalizeSelectionRoulette: starting winnerController animation');
-      winnerController?.forward(from: 0);
-
-      Timer(
-        Duration(milliseconds: (GameSettings.countdownTime * 1000).round()),
-        () {
-          if (selectedPlayerIds.isNotEmpty) {
-            _startGatheringAnimation();
-          }
-        },
-      );
-    });
+    // winner 애니메이션 완료 시 바로 gathering 시작
+    // print('[DEBUG] _finalizeSelectionRoulette: starting winnerController animation');
+    void onWinnerComplete(AnimationStatus status) {
+      if (status == AnimationStatus.completed) {
+        winnerController?.removeStatusListener(onWinnerComplete);
+        if (selectedPlayerIds.isNotEmpty) {
+          _startGatheringAnimation();
+        }
+      }
+    }
+    winnerController?.addStatusListener(onWinnerComplete);
+    winnerController?.forward(from: 0);
 
     onStateChanged();
   }
@@ -536,19 +511,31 @@ class GameService {
     if (gatheringController == null) {
       gatheringController = AnimationController(
         vsync: vsync,
-        duration: const Duration(seconds: 2),
+        duration: const Duration(milliseconds: 500),
       );
-      gatheringAnimation = Tween<double>(begin: 5000, end: 0).animate(
+      gatheringAnimation = Tween<double>(begin: 2000, end: 0).animate(
         CurvedAnimation(
           parent: gatheringController!,
-          curve: Curves.easeIn,
+          curve: Curves.linear,
         ),
       );
     }
 
+    print('[TIMING] gathering 시작: ${DateTime.now().millisecondsSinceEpoch}');
+    print('[TIMING] gatheringController duration: ${gatheringController?.duration}');
     isGathering = true;
+    showLoserImage = true;
+    loserImageController?.reset(); // opacity 1.0 상태로
     gatheringController!.forward(from: 0).then((_) {
-      reset();
+      print('[TIMING] gathering 완료: ${DateTime.now().millisecondsSinceEpoch}');
+      // gathering 완료 → 2초 유지 후 페이드아웃
+      onStateChanged();
+      Timer(const Duration(seconds: 2), () {
+        loserImageController?.forward(from: 0).then((_) {
+          reset();
+        });
+        onStateChanged();
+      });
     });
     onStateChanged();
   }
@@ -629,7 +616,7 @@ class GameService {
         HapticFeedback.vibrate();
       } catch (e2) {
         // 모든 진동 방법이 실패한 경우
-        print('진동 기능을 사용할 수 없습니다: $e2');
+        // print('진동 기능을 사용할 수 없습니다: $e2');
       }
     }
   }

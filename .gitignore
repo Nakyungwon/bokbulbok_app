@@ -44,3 +44,15 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Android SDK (installed locally)
+build-tools/
+platform-tools/
+platforms/
+licenses/
+
+# VS Code
+.vscode/
+
+# Flutter
+.knownPackages

@@ -27,11 +27,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       appBar: AppBar(
         title: const Text('설정'),
       ),
-      body: Padding(
+      body: ListView(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        children: [
             const Text(
               '게임 설정',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
@@ -180,8 +178,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 10),
             const Text('버전: 3.0.0'),
             const Text('개발자: Flutter 복불복 팀'),
-          ],
-        ),
+        ],
       ),
     );
   }

@@ -145,10 +145,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('복불복'),
-        backgroundColor: Colors.grey[900],
-      ),
+      appBar: null,
       body: Listener(
         behavior: HitTestBehavior.opaque,
         onPointerDown: _gameService.onPointerDown,
@@ -159,38 +156,46 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           height: double.infinity,
           child: Stack(
             children: [
-              // Loser 이미지 애니메이션 (중앙에서 퍼져나감, 50% -> 0% 페이드아웃)
+              // Loser 이미지 (gathering 시 가장자리부터 드러남, 2초 유지 후 페이드아웃)
               if (_gameService.showLoserImage &&
                   _gameService.loserImageAnimation != null)
-                AnimatedBuilder(
-                  animation: _gameService.loserImageAnimation!,
-                  builder: (context, child) {
-                    final size = MediaQuery.of(context).size;
-                    // 대각선 길이로 화면 전체를 덮을 수 있는 크기 계산
-                    final diagonal = (size.width * size.width + size.height * size.height);
-                    final maxSize = diagonal > 0 ? (diagonal * 0.5).clamp(0, 3000).toDouble() : size.width * 2;
-                    final animatedSize = maxSize * _gameService.loserImageAnimation!.value;
-                    // 불투명도: 0.5에서 시작해서 0으로 페이드아웃
-                    final opacity = 0.5 * (1.0 - _gameService.loserImageAnimation!.value);
-                    return Center(
-                      child: Opacity(
-                        opacity: opacity,
-                        child: SizedBox(
-                          width: animatedSize,
-                          height: animatedSize,
-                          child: Image.asset(
-                            'images/loser.png',
-                            fit: BoxFit.cover,
-                          ),
+                Positioned.fill(
+                  child: AnimatedBuilder(
+                    animation: _gameService.loserImageAnimation!,
+                    builder: (context, child) {
+                      return Opacity(
+                        opacity: _gameService.loserImageAnimation!.value,
+                        child: Image.asset(
+                          'images/loser.png',
+                          fit: BoxFit.cover,
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
               if (_gameService.touches.isNotEmpty &&
                   _gameService.selectedPlayerIds.isEmpty)
                 Positioned(
-                  top: 20,
+                  top: 50,
+                  left: 20,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.8),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '당첨: ${GameSettings.winnerCount}명',
+                      style: const TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              if (_gameService.touches.isNotEmpty &&
+                  _gameService.selectedPlayerIds.isEmpty)
+                Positioned(
+                  top: 50,
                   right: 20,
                   child: Container(
                     padding:
