@@ -35,84 +35,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
-            const Text(
-              '게임 모드',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            SegmentedButton<GameMode>(
-              segments: const [
-                ButtonSegment<GameMode>(
-                  value: GameMode.defaultMode,
-                  label: Text('기본'),
-                  icon: Icon(Icons.touch_app),
-                ),
-                ButtonSegment<GameMode>(
-                  value: GameMode.rouletteMode,
-                  label: Text('룰렛'),
-                  icon: Icon(Icons.casino),
-                ),
-              ],
-              selected: {GameSettings.gameMode},
-              onSelectionChanged: (Set<GameMode> selection) async {
-                await GameSettings.setGameMode(selection.first);
-                setState(() {});
-              },
-            ),
-            const SizedBox(height: 8),
-            Text(
-              GameSettings.gameMode == GameMode.defaultMode
-                  ? '랜덤으로 당첨자를 선택합니다'
-                  : '룰렛처럼 돌아가며 당첨자를 선택합니다 (1바퀴 = 모두 1번씩)',
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              '당첨 인원',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                IconButton(
-                  onPressed: GameSettings.winnerCount > 1
-                      ? () async {
-                          await GameSettings.setWinnerCount(GameSettings.winnerCount - 1);
-                          setState(() {});
-                        }
-                      : null,
-                  icon: const Icon(Icons.remove_circle_outline),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[800],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '${GameSettings.winnerCount}명',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                IconButton(
-                  onPressed: GameSettings.winnerCount < 10
-                      ? () async {
-                          await GameSettings.setWinnerCount(GameSettings.winnerCount + 1);
-                          setState(() {});
-                        }
-                      : null,
-                  icon: const Icon(Icons.add_circle_outline),
-                ),
-              ],
-            ),
-            Text(
-              '참여자 중 ${GameSettings.winnerCount}명이 당첨됩니다',
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-            const SizedBox(height: 20),
             SwitchListTile(
               title: const Text('진동 피드백'),
-              subtitle: const Text('승자가 선택될 때 진동을 울립니다'),
+              subtitle: const Text('당첨자가 선택될 때 진동을 울립니다'),
               value: GameSettings.hapticFeedback,
               onChanged: (bool value) async {
                 await GameSettings.setHapticFeedback(value);
@@ -125,48 +50,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               value: GameSettings.soundEffects,
               onChanged: (bool value) async {
                 await GameSettings.setSoundEffects(value);
-                setState(() {});
-              },
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              '애니메이션 속도',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              '현재: ${GameSettings.animationSpeed.toStringAsFixed(1)}x',
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-            Slider(
-              value: GameSettings.animationSpeed,
-              min: 0.5,
-              max: 2.0,
-              divisions: 6,
-              label: GameSettings.animationSpeed.toStringAsFixed(1),
-              onChanged: (double value) async {
-                await GameSettings.setAnimationSpeed(value);
-                setState(() {});
-              },
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              '당첨까지 걸리는 시간 (기본 모드)',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              '현재: ${GameSettings.countdownTime.toStringAsFixed(1)}초 (시계 모드는 3~5초 랜덤)',
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-            Slider(
-              value: GameSettings.countdownTime,
-              min: 1.0,
-              max: 5.0,
-              divisions: 8,
-              label: GameSettings.countdownTime.toStringAsFixed(1),
-              onChanged: (double value) async {
-                await GameSettings.setCountdownTime(value);
                 setState(() {});
               },
             ),

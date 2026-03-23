@@ -45,7 +45,7 @@ class ColorUtils {
   }
 
   static Color getDarkerColor(Color color) {
-    HSLColor hslColor = HSLColor.fromColor(color);
+    final hslColor = HSLColor.fromColor(color);
     return hslColor
         .withLightness((hslColor.lightness * 0.4).clamp(0.0, 1.0))
         .toColor();

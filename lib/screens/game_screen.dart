@@ -59,7 +59,7 @@ class VoronoiClipper extends CustomClipper<Path> {
     final dx = p2.dx - p1.dx;
     final dy = p2.dy - p1.dy;
 
-    List<Offset> result = [];
+    final List<Offset> result = [];
 
     for (int i = 0; i < polygon.length; i++) {
       final current = polygon[i];
@@ -126,6 +126,7 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   late GameService _gameService;
+  final Set<int> _uiPointerIds = {}; // UI 영역에서 시작된 포인터 ID 추적
 
   @override
   void initState() {
@@ -148,9 +149,21 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       appBar: null,
       body: Listener(
         behavior: HitTestBehavior.opaque,
-        onPointerDown: _gameService.onPointerDown,
-        onPointerMove: _gameService.onPointerMove,
-        onPointerUp: _gameService.onPointerUp,
+        onPointerDown: (event) {
+          if (_uiPointerIds.contains(event.pointer)) return;
+          _gameService.onPointerDown(event);
+        },
+        onPointerMove: (event) {
+          if (_uiPointerIds.contains(event.pointer)) return;
+          _gameService.onPointerMove(event);
+        },
+        onPointerUp: (event) {
+          if (_uiPointerIds.contains(event.pointer)) {
+            _uiPointerIds.remove(event.pointer);
+            return;
+          }
+          _gameService.onPointerUp(event);
+        },
         child: SizedBox(
           width: double.infinity,
           height: double.infinity,
@@ -173,22 +186,91 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                     },
                   ),
                 ),
-              if (_gameService.touches.isNotEmpty &&
-                  _gameService.selectedPlayerIds.isEmpty)
+              if (_gameService.selectedPlayerIds.isEmpty)
                 Positioned(
                   top: 50,
                   left: 20,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.8),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      '당첨: ${GameSettings.winnerCount}명',
-                      style: const TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.bold),
+                  child: Listener(
+                    onPointerDown: (event) {
+                      _uiPointerIds.add(event.pointer);
+                    },
+                    onPointerUp: (event) {
+                      _uiPointerIds.remove(event.pointer);
+                    },
+                    onPointerCancel: (event) {
+                      _uiPointerIds.remove(event.pointer);
+                    },
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          GestureDetector(
+                            onTap: () {
+                              if (GameSettings.winnerCount > 1) {
+                                GameSettings.setWinnerCount(GameSettings.winnerCount - 1);
+                                setState(() {});
+                              }
+                            },
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: GameSettings.winnerCount > 1
+                                    ? Colors.white.withValues(alpha: 0.3)
+                                    : Colors.white.withValues(alpha: 0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.remove,
+                                color: GameSettings.winnerCount > 1
+                                    ? Colors.white
+                                    : Colors.white.withValues(alpha: 0.5),
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Text(
+                              '당첨: ${GameSettings.winnerCount}명',
+                              style: const TextStyle(
+                                  color: Colors.white, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              if (GameSettings.winnerCount < 10) {
+                                GameSettings.setWinnerCount(GameSettings.winnerCount + 1);
+                                setState(() {});
+                              }
+                            },
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: GameSettings.winnerCount < 10
+                                    ? Colors.white.withValues(alpha: 0.3)
+                                    : Colors.white.withValues(alpha: 0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.add,
+                                color: GameSettings.winnerCount < 10
+                                    ? Colors.white
+                                    : Colors.white.withValues(alpha: 0.5),
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -201,7 +283,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.8),
+                      color: Colors.blue.withValues(alpha: 0.8),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -318,8 +400,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   if (position == null || color == null) {
                     return const SizedBox.shrink();
                   }
-                  final circleSize = (GameSettings.gameMode == GameMode.rouletteMode) ? 117.0 : 90.0;
-                  final circleOffset = circleSize / 2;
+                  const circleSize = 117.0;
+                  const circleOffset = circleSize / 2;
                   return Positioned(
                     left: position.dx - circleOffset,
                     top: position.dy - circleOffset,
@@ -337,7 +419,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                           boxShadow: [
                             BoxShadow(
                               color: ColorUtils.getDarkerColor(color)
-                                  .withOpacity(0.6),
+                                  .withValues(alpha: 0.6),
                               blurRadius: 12,
                               offset: const Offset(0, 4),
                             ),
@@ -356,9 +438,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   final isHighlighted =
                       _gameService.highlightedPlayerIds.contains(entry.key);
                   if (animation == null) return const SizedBox.shrink();
-                  // 시계 모드에서 원 크기 30% 증가
-                  final circleSize = (GameSettings.gameMode == GameMode.rouletteMode) ? 117.0 : 90.0;
-                  final circleOffset = circleSize / 2;
+                  const circleSize = 117.0;
+                  const circleOffset = circleSize / 2;
                   return Positioned(
                     left: entry.value.dx - circleOffset,
                     top: entry.value.dy - circleOffset,
@@ -387,12 +468,12 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                 boxShadow: isHighlighted
                                     ? [
                                         BoxShadow(
-                                          color: color.withOpacity(0.8),
+                                          color: color.withValues(alpha: 0.8),
                                           blurRadius: 30,
                                           spreadRadius: 10,
                                         ),
                                         BoxShadow(
-                                          color: Colors.white.withOpacity(0.5),
+                                          color: Colors.white.withValues(alpha: 0.5),
                                           blurRadius: 20,
                                           spreadRadius: 5,
                                         ),
@@ -400,7 +481,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                     : [
                                         BoxShadow(
                                           color: ColorUtils.getDarkerColor(color)
-                                              .withOpacity(0.6),
+                                              .withValues(alpha: 0.6),
                                           blurRadius: 12,
                                           offset: const Offset(0, 4),
                                         ),
